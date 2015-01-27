@@ -1,4 +1,5 @@
 # -*- encoding: utf-8 -*-
+require 'active_support/all'
 
 # http://qiita.com/esumii/items/0eeb30f35c2a9da4ab8a
 # 
@@ -17,7 +18,6 @@
 # * 関数の構文は、1つの変数名xと、1つの式Eからなる
 # * 関数適用（関数呼び出し）の構文は、2つの式E1とE2からなる
 
-
 # example 1
 #
 # let one_plus_two = Sub(Int 1, Sub(Int 0, Int 2)) (* 1 - (0 - 2) *)
@@ -26,7 +26,7 @@
 # (Sub (Int 1) (Sub (Int 0) (Int 2)))
 # EOS
 #
-# _eval(one_plus_two) # => 3
+# _eval(one_plus_two) #=> 3
 
 # example 2
 # 
@@ -54,7 +54,7 @@
 #                        (Var "x"))))
 #          (App (Var "abs") (Int -42)))
 # EOS
-# _eval(abs) # => 42
+# _eval(abs) #=> 42
 #
 # abs = <<-EOS
 # (App (Fun "abs" (App (Var "abs") (Int -42)))
@@ -63,7 +63,7 @@
 #                    (Sub (Int 0) (Var "x"))
 #                    (Var "x")))))
 # EOS
-# _eval(abs) # => 42
+# _eval(abs) #=> 42
 
 # example 4
 #
@@ -84,18 +84,151 @@
 #                 (Sub ((Int 0) (Var "n"))))
 #       (Int 10000)))))
 # EOS
-# _eval(sum10000) # => 50005000
-
+# _eval(sum10000) #=> 50005000
 
 def main
-  _eval(i) = i
+  example1
+end
+
+def example1
+  one_plus_two = <<-EOS
+  (Sub (Int 1) (Sub (Int 0) (Int 2)))
+  EOS
+
+  puts "example 1"
+  puts one_plus_two
+  puts " => #{_eval(one_plus_two).inspect}"
+  p build_abs(one_plus_two)
+end
+
+def _eval_inner(abs)
+end
+
+
+def _eval(source)
+  abs = build_abs(source)
+  _eval_inner(abs)
+end
+
+def build_abs(source)
+  abs, _remain = build_abs_inner(source)
+  abs
+end
+
+def build_abs_inner(source)
+  remain = source
+  abs = []
+  until remain.blank?
+    stripped = remain.strip
+    if remain != stripped
+      remain = stripped
+      next
+    end
+    token, next_remain = fetch_token(remain)
+    case token
+    when '('
+      child_abs, next_remain = build_abs_inner(next_remain)
+      abs << child_abs
+    when ')'
+      return abs, next_remain
+    else
+      abs << token
+    end
+    remain = next_remain
+  end
+
+  [abs, remain]
+end
+
+# input : source_part
+# retval : [token, remain]
+def fetch_token(source_part)
+  chars = source_part.split(//)
+  if (['(', ')'].include?(chars[0]))
+    [chars[0], chars[1..-1].join]
+  elsif chars[0] == '"'
+    end_quot_pos = chars[1..-1].index {|c| c == '"'}
+    [chars[1..end_quot_pos].join, chars[end_quot_pos+2..-1].join]
+  elsif chars[0] == '-'
+    chars = chars[1..-1].join.strip.split(//)
+    num_str = ""
+    chars.each {|c|
+      if (%w(0 1 2 3 4 5 6 7 8 9)).include?(c)
+        num_str << c
+      elsif ['(', ')', ' '].include?(c)
+        break
+      else
+        raise "unexpected token '#{c}'"
+      end
+    }
+    if num_str.blank?
+      raise "invalid token : -"
+    end
+
+    [- num_str.to_i, chars[num_str.length..-1].join]
+  elsif %w(0 1 2 3 4 5 6 7 8 9).include?(chars[0])
+    num_str = ""
+    chars.each {|c|
+      if (%w(0 1 2 3 4 5 6 7 8 9)).include?(c)
+        num_str << c
+      elsif ['(', ')', ' '].include?(c)
+        break
+      else
+        raise "unexpected token '#{c}'"
+      end
+    }
+
+    [num_str.to_i, chars[num_str.length..-1].join]
+  else
+
+    token = ""
+    chars.each {|c|
+      if ['(', ')', ' '].include?(c)
+        break
+      else
+        token << c
+      end
+    }
+
+    [token.to_sym, chars[token.length..-1].join]
+  end
 end
 
 case $PROGRAM_NAME
 when __FILE__
   main
 when /spec[^\/]*$/
-  # {spec of the implementation}
+  describe '#build_abs' do
+    it 'build blank abs' do
+      abs = build_abs('')
+      expect(abs).to eq([])
+    end
+
+    it 'build one parenthes abs' do
+      abs = build_abs('()')
+      expect(abs).to eq([[]])
+    end
+
+    it 'build integer value' do
+      abs = build_abs('(123)')
+      expect(abs).to eq([[123]])
+    end
+
+    it 'build string value' do
+      abs = build_abs('("hoge")')
+      expect(abs).to eq([["hoge"]])
+    end
+
+    it 'build symbol token' do
+      abs = build_abs('(Int 30)')
+      expect(abs).to eq([[:Int, 30]])
+    end
+    it 'build tree abs' do
+      abs = build_abs('(Sub (Int 30) (Var "x"))')
+      expect(abs).to eq([[:Sub, [:Int, 30], [:Var, "x"]]])
+    end
+  end
 end
 
-
+# >> example 1
+# >>   (Sub (Int 1) (Sub (Int 0) (Int 2)))
