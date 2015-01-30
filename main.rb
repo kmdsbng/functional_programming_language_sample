@@ -98,26 +98,26 @@ def example1
   puts "example 1"
   puts one_plus_two
   puts " => #{_eval(one_plus_two).inspect}"
-  p build_abs(one_plus_two)
+  p build_ast(one_plus_two)
 end
 
-def _eval_inner(abs)
+def _eval_inner(ast)
 end
 
 
 def _eval(source)
-  abs = build_abs(source)
-  _eval_inner(abs)
+  ast = build_ast(source)
+  _eval_inner(ast)
 end
 
-def build_abs(source)
-  abs, _remain = build_abs_inner(source)
-  abs
+def build_ast(source)
+  ast, _remain = build_ast_inner(source)
+  ast
 end
 
-def build_abs_inner(source)
+def build_ast_inner(source)
   remain = source
-  abs = []
+  ast = []
   until remain.blank?
     stripped = remain.strip
     if remain != stripped
@@ -127,17 +127,17 @@ def build_abs_inner(source)
     token, next_remain = fetch_token(remain)
     case token
     when '('
-      child_abs, next_remain = build_abs_inner(next_remain)
-      abs << child_abs
+      child_ast, next_remain = build_ast_inner(next_remain)
+      ast << child_ast
     when ')'
-      return abs, next_remain
+      return ast, next_remain
     else
-      abs << token
+      ast << token
     end
     remain = next_remain
   end
 
-  [abs, remain]
+  [ast, remain]
 end
 
 # input : source_part
@@ -198,37 +198,35 @@ case $PROGRAM_NAME
 when __FILE__
   main
 when /spec[^\/]*$/
-  describe '#build_abs' do
-    it 'build blank abs' do
-      abs = build_abs('')
-      expect(abs).to eq([])
+  describe '#build_ast' do
+    it 'build blank ast' do
+      ast = build_ast('')
+      expect(ast).to eq([])
     end
 
-    it 'build one parenthes abs' do
-      abs = build_abs('()')
-      expect(abs).to eq([[]])
+    it 'build one parenthes ast' do
+      ast = build_ast('()')
+      expect(ast).to eq([[]])
     end
 
     it 'build integer value' do
-      abs = build_abs('(123)')
-      expect(abs).to eq([[123]])
+      ast = build_ast('(123)')
+      expect(ast).to eq([[123]])
     end
 
     it 'build string value' do
-      abs = build_abs('("hoge")')
-      expect(abs).to eq([["hoge"]])
+      ast = build_ast('("hoge")')
+      expect(ast).to eq([["hoge"]])
     end
 
     it 'build symbol token' do
-      abs = build_abs('(Int 30)')
-      expect(abs).to eq([[:Int, 30]])
+      ast = build_ast('(Int 30)')
+      expect(ast).to eq([[:Int, 30]])
     end
-    it 'build tree abs' do
-      abs = build_abs('(Sub (Int 30) (Var "x"))')
-      expect(abs).to eq([[:Sub, [:Int, 30], [:Var, "x"]]])
+    it 'build tree ast' do
+      ast = build_ast('(Sub (Int 30) (Var "x"))')
+      expect(ast).to eq([[:Sub, [:Int, 30], [:Var, "x"]]])
     end
   end
 end
 
-# >> example 1
-# >>   (Sub (Int 1) (Sub (Int 0) (Int 2)))
