@@ -102,6 +102,23 @@ def example1
 end
 
 def _eval_inner(ast)
+  case ast
+  when Array
+    evaled_ast = ast.map {|child| _eval_inner(child)}
+    case evaled_ast[0]
+    when nil
+      nil
+    when Fixnum # 本当は引数がないことにマッチさせたい
+      evaled_ast[0]
+    when :Int # 本当は引数が1個で数字であることにマッチさせたい
+      evaled_ast[1]
+    else
+      raise "Unknown operator #{evaled_ast[0].inspect}"
+    end
+  else Fixnum
+    ast
+  end
+
 end
 
 
@@ -235,7 +252,35 @@ when /spec[^\/]*$/
       (Sub (Int 1) (Sub (Int 0) (Int 2)))
       EOS
 
+      pending
       result = _eval(one_plus_two)
+      expect(result).to eq(3)
+    end
+
+  end
+
+  describe "_eval_inner" do
+    it "eval nil" do
+      ast = []
+      result = _eval_inner(ast)
+      expect(result).to eq(nil)
+    end
+
+    it "eval fixnum" do
+      ast = [5]
+      result = _eval_inner(ast)
+      expect(result).to eq(5)
+    end
+
+    it "eval Int" do
+      ast = [:Int, 3]
+      result = _eval_inner(ast)
+      expect(result).to eq(3)
+    end
+
+    it "eval ((Int 3))" do
+      ast = [[:Int, 3]]
+      result = _eval_inner(ast)
       expect(result).to eq(3)
     end
   end
