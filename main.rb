@@ -228,5 +228,17 @@ when /spec[^\/]*$/
       expect(ast).to eq([[:Sub, [:Int, 30], [:Var, "x"]]])
     end
   end
+
+  describe "plus method" do
+    it "implement plus method" do
+      one_plus_two = <<-EOS
+      (Sub (Int 1) (Sub (Int 0) (Int 2)))
+      EOS
+
+      result = _eval(one_plus_two)
+      expect(result).to eq(3)
+    end
+  end
+
 end
 
